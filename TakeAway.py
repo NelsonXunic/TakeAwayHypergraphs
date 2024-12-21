@@ -4,7 +4,7 @@ import sys
 import random
 import pickle
 from GameStates import save_game_state, save_current_game_state, save_game_states_to_file, load_game_states_from_file, load_current_game_state, calculate_nim_value
-from AI import get_possible_moves
+# from AI import get_possible_moves
 # Dec 20, 2024
 # Set up the game window dimensions (These are pixels)
 width = 700
@@ -21,6 +21,9 @@ pygame.init()
 
 # Create the game window
 screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
+
+# Set the window title
+pygame.display.set_caption("Take-Away Game")
 
 # Colors (We will use this for graphics; other color will be added to the list as needed)
 # WHITE = (255, 255, 255)
@@ -180,7 +183,7 @@ def display_main_menu():
     instructions_text = font.render('Instructions', True, BLACK)
     settings_text = font.render('Settings', True, BLACK)
     quit_text = font.render('Quit', True, BLACK)
-    nim_value_text = font.render('Calculate Nim Value', True, BLACK)
+    nim_value_text = font.render('Research', True, BLACK)
 
     game_state = load_current_game_state()
     continue_color = BLACK if game_state else (128, 128, 128)
@@ -772,6 +775,29 @@ def get_board_size():
 
     return rows, cols
 
+def display_research():
+    """
+    Displays the research menu.
+    """
+    # Fill the screen with the background color
+    screen.fill((218,232,252))
+    font = pygame.font.Font(None, 50)
+    nim_regular_text = font.render('Regular Nim Value ', True, BLACK)
+    nim_hyper_text = font.render('Hypergraph Nim Value (nxm)', True, BLACK)
+    quit_text = font.render('Quit', True, BLACK)
+
+    # Load and display the logo
+    logo = pygame.image.load('Logo.png')
+    # logo = pygame.transform.scale(logo, (200, 125))
+    logo_rect = logo.get_rect(center=(width // 2, 50))
+    screen.blit(logo, logo_rect)
+
+    screen.blit(nim_regular_text, (width // 2 - nim_regular_text.get_width() // 2, height // 2 - 250))
+    screen.blit(nim_hyper_text, (width // 2 - nim_hyper_text.get_width() // 2, height // 2 - 150))
+    screen.blit(quit_text, (width // 2 - quit_text.get_width() // 2, height // 2 - 50))
+
+    pygame.display.flip()
+
 def display_nim_value(vertices, edges, hyperedges, nim_value, rows, cols):
     """
     Displays the board and the calculated Nim value on the screen.
@@ -919,7 +945,7 @@ def main():
     in_game = False
     in_settings = False
     in_winner_screen = False
-    in_nim_value = False
+    in_research = False
     player1, player2 = "", ""
     current_player = 1
     winner = ""
@@ -984,7 +1010,7 @@ def main():
                         in_settings = True
                     elif height // 2 + 150 < y < height // 2 + 250:
                         in_menu = False
-                        in_nim_value = True
+                        in_research = True
                     elif height // 2 + 250 < y < height // 2 + 350:
                         running = False
 
@@ -1198,10 +1224,31 @@ def main():
                             in_winner_screen = False
                             in_menu = True
 
-        elif in_nim_value:
-            calculate_nim_value_menu()
-            in_nim_value = False
-            in_menu = True
+        elif in_research:
+            # calculate_nim_value_menu()
+            display_research()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    # in_winner_screen = False
+                    # in_menu = True
+                    running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    x, y = event.pos
+                    if width // 2 - 150 < x < width // 2 + 150:
+                        if height // 2 - 250 < y < height // 2 - 150:
+                            in_research = False
+                            in_menu = True
+                        elif height // 2 - 150 < y < height // 2 - 50:
+                            calculate_nim_value_menu()
+                            in_research = True
+                            # in_menu = True
+                            # in_game = True
+                        elif height // 2 - 50 < y < height // 2 + 50:
+                            in_research = False
+                            in_menu = True
+
+            # in_research = False
+            # in_menu = True
 
     # Save the game states to a file when the game ends
     save_game_states_to_file('game_states.pkl')
