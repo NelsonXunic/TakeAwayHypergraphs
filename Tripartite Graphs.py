@@ -1,4 +1,6 @@
-import math
+# import math
+ # Dec 21, 2024 NDXC-- Moving the program to a Pygame window.
+import pygame
 import re
 import numpy as np
 # Dec 19, 2024 NDXC-- This is a package that is not installed by default. You can install it with pip install oapackage.
@@ -7,6 +9,40 @@ import numpy as np
 # import oapackage
 import pickle
 import networkx as nx
+
+# Dec 21, 2024 NDXC-- Setting up the Pygame window. ##########
+# Initialize Pygame
+pygame.init()
+
+# Set up the display
+width, height = 800, 600
+screen = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Tripartite Graph Nim Value Calculator")
+
+# Define colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GRAY = (200, 200, 200)
+RED = (255, 0, 0)
+
+# Define fonts
+font = pygame.font.Font(None, 36)
+
+# Input fields
+vertex_input = ""
+edges_input = ""
+input_active = None
+
+# Load or initialize the graphs dictionary
+try:
+    with open("graphs.dict", "rb") as file:
+        graphs = pickle.load(file)
+except FileNotFoundError:
+    graphs = {}
+
+def draw_text(text, x, y, color=BLACK):
+    text_surface = font.render(text, True, color)
+    screen.blit(text_surface, (x, y))
 
 # Dec 19, 2024 NDXC-- This variable allows the user to input the number of partitions they want to split the graph into.
 # You can change this to a number instead of having to type it in each time.
@@ -218,86 +254,72 @@ def main():
     :return: None
     """
     global graphs, MANUAL_PARTITE
-    while True:
-        size = int(input("How many vertices does the graph have: "))
-        if size < 0:
-            quit()
-        edges = input("What are the edges? (e.x. 1,2;3,4;5,6; or 'complete'): ")
-        manualEntry = True
-        inputError = None
-        if edges.lower()[0] == "c":
-            print("Ahhh, I see you're looking for a complete graph (ง •_•)ง")
-            manualEntry = False
-            numpartitions = MANUAL_PARTITE
-            while numpartitions < 1 or numpartitions > size:
-                numpartitions = int(input(f"How many partitions would you like to split your {size} vertices into: "))
-            partitions = [0 for i in range(numpartitions)]
-            extraNodes = size - numpartitions
-            print(f"Currently generating a graph with {numpartitions} partitions...")
-            for i in range(numpartitions):
-                if i+1 % 10 == 1:
-                    postfix = "st"
-                elif i+1 % 10 == 2:
-                    postfix = "nd"
-                elif i+1 % 10 == 3:
-                    postfix = "rd"
-                else:
-                    postfix = "th"
-                response = -1
-                while response < 1 or response - 1 > extraNodes:
-                    response = int(input(f"How many verticies in the {i+1}{postfix} position: "))
-                extraNodes -= response - 1
-                partitions[i] = response
-            ordered_edges = getTripartiteEdges(size, partitions)
-            if isinstance(ordered_edges, str):
-                inputError = ordered_edges
+    # Dec 21, 2024 NDXC-- Variables for the input fields
+    global vertex_input, edges_input, input_active
+    running = True
+    result = None
 
+    # Dec 21, 2024 NDXC-- Main loop
+    while running:
+        screen.fill(WHITE)
+        draw_text("Tripartite Graph Nim Value Calculator", 20, 20)
 
-        if manualEntry:
-            edgeExpression = r"[0-9]+"
-            ordered_edges = []
-            integers = re.findall(edgeExpression, edges)
+        draw_text("Number of vertices:", 20, 80)
+        pygame.draw.rect(screen, GRAY if input_active == "vertices" else WHITE, (300, 80, 200, 36))
+        draw_text(vertex_input, 310, 80)
 
+        draw_text("Edges (e.g., 0,1;3,4;5,6):", 20, 140)
+        pygame.draw.rect(screen, GRAY if input_active == "edges" else WHITE, (300, 140, 500, 36))
+        draw_text(edges_input, 310, 140)
 
-            if len(integers) % 2 == 1:
-                inputError = f"User entered {len(integers)} ends that the edges connect to. This cannot be odd."
-            for edge_Number in range(len(integers)//2):
-                first_num = int(integers[2 * edge_Number])
-                second_num = int(integers[2 * edge_Number + 1])
-                ordered_edges.append((first_num, second_num))
-                if first_num >= size:
-                    inputError = f"User error, {first_num} is not in the acceptable range of labels from 0 to {size - 1}. Try again!"
-                if second_num >= size:
-                    inputError = f"User error, {second_num} is not in the acceptable range of labels from 0 to {size - 1}. Try again!"
+        pygame.draw.rect(screen, RED, (20, 200, 260, 50))
+        draw_text("Calculate Nim Value", 30, 210, WHITE)
 
-        if inputError is None:
-            break
-        print(inputError)
-
-    graph = np.zeros((size, size), dtype=int)
-    graph = attachEdges(graph, ordered_edges)
-
-    refreshFile = False
-    if refreshFile:
-        graphs = {}
-    else:
-        with open("graphs.dict", "rb") as file:
-            graphs = pickle.load(file)
-
-    print(f"The nim value of \n{graph} \nis {getNimValue(graph)}")
-
-    with open("graphs.dict", "wb") as file:
-        pickle.dump(graphs, file)
-
+        if result is not None:
+            draw_text(f"Nim Value: {result}", 20, 280)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if 250 <= event.pos[0] <= 450 and 80 <= event.pos[1] <= 116:
+                    input_active = "vertices"
+                elif 250 <= event.pos[0] <= 750 and 140 <= event.pos[1] <= 176:
+                    input_active = "edges"
+                elif 20 <= event.pos[0] <= 220 and 200 <= event.pos[1] <= 250:
+                    try:
+                        size = int(vertex_input)
+                        edges = edges_input
+                        edgeExpression = r"[0-9]+"
+                        ordered_edges = []
+                        integers = re.findall(edgeExpression, edges)
+                        if len(integers) % 2 == 1:
+                            result = "Invalid edge input"
+                        else:
+                            for edge_Number in range(len(integers)//2):
+                                first_num = int(integers[2 * edge_Number])
+                                second_num = int(integers[2 * edge_Number + 1])
+                                ordered_edges.append((first_num, second_num))
+                            graph = np.zeros((size, size), dtype=int)
+                            graph = attachEdges(graph, ordered_edges)
+                            result = getNimValue(graph)
+                            with open("graphs.dict", "wb") as file:
+                                pickle.dump(graphs, file)
+                    except ValueError:
+                        result = "Invalid input"
+            elif event.type == pygame.KEYDOWN:
+                if input_active == "vertices":
+                    if event.key == pygame.K_BACKSPACE:
+                        vertex_input = vertex_input[:-1]
+                    else:
+                        vertex_input += event.unicode
+                elif input_active == "edges":
+                    if event.key == pygame.K_BACKSPACE:
+                        edges_input = edges_input[:-1]
+                    else:
+                        edges_input += event.unicode
+        pygame.display.flip()
+    pygame.quit()
 
 if __name__ == '__main__':
-    graphs = None
-    print("Welcome to Meagan's tripartite graphs. I can find the nim values for any graph you can label!")
-    print("Now, how can I help?")
-    while True:
-        try:
-            main()
-        except ValueError:
-            print("You probably entered a letter where you wanted a number or you didn't type in the edges right. Try again!")
 
-
+    main()
